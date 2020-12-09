@@ -1,13 +1,19 @@
-
-
+import os 
 import pprint
 import re
 import string
 import sys
-reload(sys)  # Reload does the trick!
-sys.setdefaultencoding('UTF8')
+import numpy as np
+import spacy 
+from spacy.lang.en.stop_words import STOP_WORDS
+
+import importlib
+importlib.reload(sys)
+
 from gensim.parsing.preprocessing import STOPWORDS
 STOPWORDS = list(set(STOPWORDS))
+
+nlp = spacy.load('en_core_web_sm') # no need for large model
 
 hand_picked_stop_words = ['rt' , "it's" , 'says' , "doesn't" , "shes" ,"hes" , "she's" ,"he's", u"don't" , "thanks" , "thank's", "like" ,
                          "today" , "time", "know" , "knows" , "help" , "check" , "good", 'must', 'back', 'service' ,
@@ -16,18 +22,6 @@ hand_picked_stop_words = ['rt' , "it's" , 'says' , "doesn't" , "shes" ,"hes" , "
                          'sure', 'edit', 'may', 'maybe', 'may not', 'might','might not', "we've", 'able', 'go', 'goes',
                          'went', "what's", 'list', 'lists', "can't", 'forever', 'ever', 'says', 'item', "we'd", '#deporthillary',
                          'woud', 'will', 'would', 'mmmmk', "t'was", "ira's", 'sehe', 'haaa', "l'art", 'spss', "bryan's"]
-
-def translate_non_alphanumerics(to_translate, translate_to=u'_'):
-    not_letters_or_digits = u'!"#%\'()&*+,-/:;<=>?[\]^_`{|}~'
-    if isinstance(to_translate, unicode):
-        translate_table = dict((ord(char), unicode(translate_to))
-                               for char in not_letters_or_digits)
-    else:
-        assert isinstance(to_translate, str)
-        translate_table = string.maketrans(not_letters_or_digits,
-                                           translate_to
-                                              *len(not_letters_or_digits))
-    return to_translate.translate(translate_table)
 
 
 
@@ -41,26 +35,28 @@ def length_check(  word):
                 return word 
 
 def pre_process_sentence (  sentence ):
-
-    sentence = sentence.lower()
-    try:
-        sent = sentence.encode( 'ascii' , 'ignore')
-    except:
-        sent = sentence.decode( 'ascii', 'ignore')
-    # sent = re.sub(ur'\b(\d+\s+)', '', sent)
-    sent = translate_non_alphanumerics( sent, ' ')   
-    sent = re.sub(ur"\s+"," ", sent)
-    sent = re.sub(ur'\b(\s+\d+\s+)', '', sent)
-    sent = re.split(ur'\.\s+', sent)
+    
     text = []
-    for text_ in sent:
-        text.extend(text_.split())
-    text = [word.strip() for word in text if len(word) >=2 and not word.isdigit() and length_check(word) and word not in STOPWORDS ]
+    punct = list(string.punctuation)
+    
+    #remove punctuation
+    for punctuation in punct:
+        sentence = sentence.replace(punctuation, '')
+
+    #convert to lowercase and tokenize 
+    sentence = nlp.make_doc(str(sentence.lower()))
+
+    #lemmatize
+    for token in sentence:
+        #remove stop words
+        if token.is_stop == False:
+            text.append(token.lemma_)
+            
     return text
 
 
 
 if __name__ == "__main__":
 	
-	print "Start"
-	print pre_process_sentence('Machine learning testong jsswasxa')
+	print("Start")
+	print(pre_process_sentence('Machine learning testong jsswasxa'))

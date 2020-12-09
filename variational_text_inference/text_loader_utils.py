@@ -35,9 +35,9 @@ class TextLoader():
             iterations = len(self.data) / batch_size
         else:
             iterations = int(len(self.data) / batch_size) + 1
-        for i in xrange(iterations):
+        for i in range(iterations):
             batch_data = islice(sourceiter, batch_size)
-            yield chain([batch_data.next()], batch_data)
+            yield chain([next(batch_data)], batch_data)
             
 
     def make_cum_table(self, power=0.75, domain=2**31 - 1):
@@ -77,14 +77,14 @@ class TextLoader():
                 self.temp_store.extend(preprocessed)
 
         counter = Counter(self.temp_store)
-        words = [k for k, v in counter.iteritems() if v > self.min_count]
+        words = [k for k, v in counter.items() if v > self.min_count]
         self.vocab = dict(zip(words , range(len(words))))
         self.temp_store = [] 
         
 
     def _vocab_inverse(self):
 
-        self.vocab_inverse = {k:v for v, k in self.vocab.iteritems()}
+        self.vocab_inverse = {k:v for (v, k) in self.vocab.items()}
         self.index2word = self.vocab_inverse
 
     def _bag_of_words(self , chunk_data , vocab_size = None):
@@ -107,7 +107,7 @@ class TextLoader():
     def get_matrix_position(self, mat_idx):
     
         mat_idx_full_ = []
-        for i in xrange(2):
+        for i in range(2):
             temp_list = []
             for elem in mat_idx[i]:
                 temp_list.append([i, elem])
@@ -137,9 +137,9 @@ if __name__ == "__main__":
     from sklearn.datasets import fetch_20newsgroups
     twenty_train = fetch_20newsgroups(subset='train')   
     data_ = twenty_train.data
-    print "Download 20 news group data completed"
+    print("Download 20 news group data completed")
     A = TextLoader(data_ , min_count = 27)
-    print len(A.vocab)
+    prin(len(A.vocab))
     batch_size = 100
     batch_data = A.get_batch(batch_size)
 
@@ -147,11 +147,11 @@ if __name__ == "__main__":
         collected_data = [chunks for chunks in batch_]
         bow , dow , negative_mask  = A._bag_of_words(collected_data)
 
-        print bow.shape , dow.shape , negative_mask.shape
-        print bow
-        print dow
-        print negative_mask
+        print(bow.shape , dow.shape , negative_mask.shape)
+        print(bow)
+        print(dow)
+        print(negative_mask)
 
-        print bow.max() , dow.max() , negative_mask.max()
-        print "Succesful"
+        print(bow.max() , dow.max() , negative_mask.max())
+        print("Successful")
         break

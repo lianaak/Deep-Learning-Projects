@@ -1,5 +1,5 @@
 
-import cPickle
+import pickle as cPickle
 import numpy as np
 
 def vector_from_document_tfidf(tfidf_dict , jd_tokens, the_model):

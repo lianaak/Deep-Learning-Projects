@@ -1,10 +1,11 @@
 
 from text_loader_utils import TextLoader
-import cPickle
+import pickle as cPickle
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import os
 from vector_utils import find_norm
+import keras.backend as K
 
 np.random.seed(0)
 tf.set_random_seed(0)
@@ -24,15 +25,17 @@ class NVDM(object):
         self.transfer_fct = transfer_fct
         self.output_activation = output_activation
         
+        tf.compat.v1.disable_eager_execution()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.encoder_hidden_dim = encoder_hidden_dim
         self.generator_hidden_dim = generator_hidden_dim
         self.initializer = initializer
-        self.dynamic_batch_size = tf.placeholder(tf.int32 , shape=None)
+        self.dynamic_batch_size = tf.placeholder(tf.float32, [None, input_dim])
         self.batch_size = batch_size
         self.learning_rate = learning_rate
 
+        
         self.X = tf.placeholder(tf.float32, [None, input_dim])
         self.MASK = tf.placeholder(tf.float32, [None, input_dim])
         self.SESS = the_sess
@@ -65,7 +68,7 @@ class NVDM(object):
         
         with tf.variable_scope("encoder"):
             
-            for i in xrange(len(self.encoder_hidden_dim)):
+            for i in range(len(self.encoder_hidden_dim)):
                 if i == 0 :
                     Weights_encoder['W_{}'.format(i)] = tf.Variable(self.initializer(self.input_dim, self.encoder_hidden_dim[i]))
                     Biases_encoder['b_{}'.format(i)] = tf.Variable(tf.zeros([self.encoder_hidden_dim[i]], dtype=tf.float32))
@@ -84,7 +87,7 @@ class NVDM(object):
 
             if self.generator_hidden_dim:
             
-                for i in xrange(len(self.generator_hidden_dim)):
+                for i in range(len(self.generator_hidden_dim)):
                     if i == 0 :
                         Weights_generator['W_{}'.format(i)] = tf.Variable(self.initializer(self.hidden_dim, self.generator_hidden_dim[i]))
                         Biases_generator['b_{}'.format(i)] = tf.Variable(tf.zeros([self.generator_hidden_dim[i]]), dtype=tf.float32)
@@ -105,12 +108,12 @@ class NVDM(object):
         self.z_mean, self.z_log_sigma_sq = self._encoder_network(self.Weights_encoder, self.Biases_encoder)
         
         # Draw one sample z from Gaussian distribution
-        
-        eps = tf.random_normal((self.dynamic_batch_size, self.hidden_dim), 0, 1, 
-                               dtype=tf.float32)
+        eps = K.random_normal(shape=(K.shape(self.z_mean)[0], self.hidden_dim))
+        #eps = tf.random_normal((self.dynamic_batch_size, self.hidden_dim), 0, 1, 
+        #                       dtype=tf.float32)
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean, 
-                        tf.mul(tf.exp(self.z_log_sigma_sq), eps))
+                        tf.multiply(tf.exp(self.z_log_sigma_sq), eps))
         self.X_reconstruction_mean = self._generator_network(self.Weights_generator , self.Biases_generator)
 
         
@@ -124,7 +127,7 @@ class NVDM(object):
 
         with tf.variable_scope("enoder_function"):
 
-            for i in xrange(len(weights)-2):
+            for i in range(len(weights)-2):
                 if i == 0:
                     encoder_results['res_{}'.format(i)] = self.transfer_fct(tf.add(tf.matmul(self.X, weights['W_{}'.format(i)]),
                                                                                biases['b_{}'.format(i)]))
@@ -149,7 +152,7 @@ class NVDM(object):
 
             if self.generator_hidden_dim:
 
-                for i in xrange(len(weights)-2):
+                for i in range(len(weights)-2):
                     if i == 0:
                         generator_results['res_{}'.format(i)] = self.transfer_fct(tf.add(tf.matmul(self.z, weights['W_{}'.format(i)]),
                                                                                    biases['b_{}'.format(i)]))
@@ -171,7 +174,7 @@ class NVDM(object):
        
 
         logits = tf.log(tf.nn.softmax(self.X_reconstruction_mean)+0.0001)
-        self.reconstr_loss  = -tf.reduce_sum(tf.mul(logits, self.X), 1)
+        self.reconstr_loss  = -tf.reduce_sum(tf.multiply(logits, self.X), 1)
 
         # logits = tf.nn.log_softmax(self.X_reconstruction_mean)
 
